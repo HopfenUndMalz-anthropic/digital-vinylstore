@@ -36,6 +36,7 @@
   <h1>Virtueller Plattenstore</h1>
   <p>Top 10 pro Genre · Preise sind Schätzungen · Kauf erfolgt beim Anbieter</p>
 </header>
+<div style="text-align:center;padding:0 1rem"><input id="search" type="search" placeholder="Suche nach Künstler oder Titel (alle Genres)" style="width:100%;max-width:480px;padding:.6rem .9rem;border-radius:8px;border:1px solid #333;background:#1c1c1c;color:#f2f2f2;font-size:1rem"></div>
 <nav id="nav"></nav>
 <main>
   <h2 id="genre-title"></h2>
@@ -63,14 +64,14 @@ const GENRES = [
     { artist:"Jimi Hendrix", title:"Are You Experienced", year:1967, source:"Klassiker", reason:"Pflichtstück für Gitarrenfans.", price:"25–35 €" }
   ]},
   { name: "Pop", slug: "pop-vinyl-LP", records: [
-    { artist:"Michael Jackson", title:"Thriller", year:1982, source:"Klassiker", reason:"Meistverkauftes Album der Geschichte, zeitlos.", price:"25–35 €" },
-    { artist:"Prince", title:"Purple Rain", year:1984, source:"Klassiker", reason:"Pop, Rock und Soul in einem Album.", price:"25–35 €" },
+    { artist:"Michael Jackson", title:"Thriller", year:1982, source:"Klassiker", reason:"Meistverkauftes Album der Geschichte, zeitlos.", price:"28 €" },
+    { artist:"Prince", title:"Purple Rain", year:1984, source:"Klassiker", reason:"Pop, Rock und Soul in einem Album.", price:"28 €" },
     { artist:"Madonna", title:"Like a Virgin", year:1984, source:"Klassiker", reason:"Prägende Pop-Platte der 80er.", price:"25–30 €" },
     { artist:"ABBA", title:"Arrival", year:1976, source:"Klassiker", reason:"Perfekt produzierter Popsound.", price:"25–30 €" },
     { artist:"Whitney Houston", title:"Whitney Houston", year:1985, source:"Klassiker", reason:"Starke Stimme, große Hits.", price:"25–30 €" },
     { artist:"Adele", title:"21", year:2011, source:"Klassiker", reason:"Eines der erfolgreichsten Pop-Alben der 2010er.", price:"25–30 €" },
     { artist:"Lady Gaga", title:"The Fame", year:2008, source:"Klassiker", reason:"Moderner Pop mit starken Hooks.", price:"25–35 €" },
-    { artist:"Amy Winehouse", title:"Back to Black", year:2006, source:"Klassiker", reason:"Retro-Soul mit modernem Pop-Einschlag.", price:"25–35 €" },
+    { artist:"Amy Winehouse", title:"Back to Black", year:2006, source:"Klassiker", reason:"Retro-Soul mit modernem Pop-Einschlag.", price:"28 €" },
     { artist:"Dua Lipa", title:"Future Nostalgia", year:2020, source:"Aktuell", reason:"Disco-inspirierter Pop, live stark.", price:"25–35 €" },
     { artist:"Harry Styles", title:"Harry's House", year:2022, source:"Aktuell", reason:"Verspielter, warmer Pop.", price:"25–35 €" }
   ]},
@@ -171,7 +172,9 @@ function priceHtml(r) {
   return `<div class="price">Standard-LP: vinylpladen.de <span>${v.price}</span> · HHV <span>${h.price}</span><br>Günstigster: <span>${best}</span></div>`;
 }
 
+let activeIndex = 0;
 function show(i) {
+  activeIndex = i;
   document.querySelectorAll("nav button").forEach((b, j) => b.classList.toggle("active", i === j));
   const g = GENRES[i];
   title.textContent = g.name;
@@ -189,6 +192,30 @@ function show(i) {
       </div>
     </li>`).join("");
 }
+
+// Suche über alle Genres
+document.getElementById("search").addEventListener("input", (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) { show(activeIndex); return; }
+  const hits = [];
+  GENRES.forEach(g => g.records.forEach(r => {
+    if ((r.artist + " " + r.title).toLowerCase().includes(q)) hits.push({ ...r, genre: g.name });
+  }));
+  title.textContent = "Suche: " + e.target.value.trim();
+  note.textContent = hits.length + " Treffer in allen Genres.";
+  genreLink.href = SHOP;
+  list.innerHTML = hits.length ? hits.map((r, k) => `
+    <li>
+      <div class="rank">${k + 1}</div>
+      <div class="info">
+        <div class="artist">${r.artist} · ${r.year} · ${r.genre}</div>
+        <div class="title">${r.title}</div>
+        <div class="meta">${r.reason}</div>
+        ${priceHtml(r)}
+        <a class="buy" href="${buyUrl(r)}" target="_blank" rel="noopener">${r.shops ? "Zum günstigeren Shop" : "Im Shop suchen"}</a>
+      </div>
+    </li>`).join("") : "<li>Keine Treffer.</li>";
+});
 
 GENRES.forEach((g, i) => {
   const b = document.createElement("button");

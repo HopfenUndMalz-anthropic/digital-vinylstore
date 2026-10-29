@@ -51,13 +51,13 @@ const SHOP = "https://vinylpladen.de";
 // Jede Platte: artist, title, year, source ("Klassiker" | "Aktuell"), reason, price (Spanne, Schätzung)
 const GENRES = [
   { name: "Rock", slug: "rock-vinyl-LP", records: [
-    { artist:"Pink Floyd", title:"The Dark Side of the Moon", year:1973, source:"Klassiker", reason:"Zeitloses Konzeptalbum, sehr gute Pressungen verfügbar.", price:"25–35 €" },
-    { artist:"Led Zeppelin", title:"IV", year:1971, source:"Klassiker", reason:"Der Kern des Hardrock-Kanons.", price:"25–35 €" },
-    { artist:"The Beatles", title:"Abbey Road", year:1969, source:"Klassiker", reason:"Abschluss-Album mit starkem Seitenwechsel.", price:"25–35 €" },
+    { artist:"Pink Floyd", title:"The Dark Side of the Moon", year:1973, source:"Klassiker", reason:"Zeitloses Konzeptalbum, sehr gute Pressungen verfügbar.", price:"31 €", shops:{ cheapest:"vinylpladen", vinylpladen:{ price:"31 €", url:"https://vinylpladen.de/vinyl/pink-floyd/the-dark-side-of-the-moon-LP", edition:"Jubiläumsausgabe 180g" }, hhv:{ price:"32,99 €", url:"https://www.hhv.de/records/katalog/filter/suche-D2N2S11?term=pink+floyd+dark+side+of+the+moon" } } },
+    { artist:"Led Zeppelin", title:"IV", year:1971, source:"Klassiker", reason:"Der Kern des Hardrock-Kanons.", price:"23 €", shops:{ cheapest:"vinylpladen", vinylpladen:{ price:"23 €", url:"https://vinylpladen.de/vinyl/led-zeppelin/led-zeppelin-lv-LP", edition:"Standard Gatefold" }, hhv:{ price:"26,99 €", url:"https://www.hhv.de/records/katalog/filter/suche-D2N2S11?term=led+zeppelin+iv" } } },
+    { artist:"The Beatles", title:"Abbey Road", year:1969, source:"Klassiker", reason:"Abschluss-Album mit starkem Seitenwechsel.", price:"28 €", shops:{ cheapest:"vinylpladen", vinylpladen:{ price:"28 €", url:"https://vinylpladen.de/vinyl/the-beatles/abbey-road-LP", edition:"Jubiläumsausgabe 180g" }, hhv:{ price:"32,99 €", url:"https://www.hhv.de/records/katalog/filter/suche-D2N2S11?term=the+beatles+abbey+road" } } },
     { artist:"Queen", title:"A Night at the Opera", year:1975, source:"Klassiker", reason:"Vielseitig, von Oper bis Hardrock.", price:"25–30 €" },
-    { artist:"Fleetwood Mac", title:"Rumours", year:1977, source:"Klassiker", reason:"Produktion und Songwriting auf höchstem Niveau.", price:"25–30 €" },
+    { artist:"Fleetwood Mac", title:"Rumours", year:1977, source:"Klassiker", reason:"Produktion und Songwriting auf höchstem Niveau.", price:"22 €" },
     { artist:"The Rolling Stones", title:"Exile on Main St.", year:1972, source:"Klassiker", reason:"Rauer, organischer Rock-Klassiker.", price:"25–35 €" },
-    { artist:"Radiohead", title:"OK Computer", year:1997, source:"Klassiker", reason:"Wegweisend für moderne Rockmusik.", price:"25–35 €" },
+    { artist:"Radiohead", title:"OK Computer", year:1997, source:"Klassiker", reason:"Wegweisend für moderne Rockmusik.", price:"31 €" },
     { artist:"The Who", title:"Who's Next", year:1971, source:"Klassiker", reason:"Starke Songs, kraftvolle Band.", price:"25–35 €" },
     { artist:"Neil Young", title:"After the Gold Rush", year:1970, source:"Klassiker", reason:"Folk- und Rockmischung, ruhiger Einstieg.", price:"25–30 €" },
     { artist:"Jimi Hendrix", title:"Are You Experienced", year:1967, source:"Klassiker", reason:"Pflichtstück für Gitarrenfans.", price:"25–35 €" }
@@ -154,9 +154,21 @@ const title = document.getElementById("genre-title");
 const note = document.getElementById("genre-note");
 const genreLink = document.getElementById("genre-link");
 
-// Suchlink im Shop. Parameter ist NICHT verifiziert, siehe README.
+// Verlinkung: bei verglichenen Platten direkt zum günstigeren Shop,
+// sonst HHV-Suche (Suchpfad getestet). Produktlinks vinylpladen: /vinyl/{artist}/{title}-LP-1 (Muster getestet).
+const HHV_SEARCH = "https://www.hhv.de/records/katalog/filter/suche-D2N2S11?term=";
 function buyUrl(r) {
-  return SHOP + "/?s=" + encodeURIComponent(r.artist + " " + r.title);
+  if (r.shops) {
+    return r.shops.cheapest === "vinylpladen" ? r.shops.vinylpladen.url : r.shops.hhv.url;
+  }
+  return HHV_SEARCH + encodeURIComponent(r.artist + " " + r.title);
+}
+
+function priceHtml(r) {
+  if (!r.shops) return `<div class="price">Ca. <span>${r.price}</span></div>`;
+  const v = r.shops.vinylpladen, h = r.shops.hhv;
+  const best = r.shops.cheapest === "vinylpladen" ? "vinylpladen.de" : "HHV";
+  return `<div class="price">Standard-LP: vinylpladen.de <span>${v.price}</span> · HHV <span>${h.price}</span><br>Günstigster: <span>${best}</span></div>`;
 }
 
 function show(i) {
@@ -172,8 +184,8 @@ function show(i) {
         <div class="artist">${r.artist} · ${r.year} · ${r.source}</div>
         <div class="title">${r.title}</div>
         <div class="meta">${r.reason}</div>
-        <div class="price">Ca. <span>${r.price}</span></div>
-        <a class="buy" href="${buyUrl(r)}" target="_blank" rel="noopener">Im Shop suchen</a>
+        ${priceHtml(r)}
+        <a class="buy" href="${buyUrl(r)}" target="_blank" rel="noopener">${r.shops ? "Zum günstigeren Shop" : "Im Shop suchen"}</a>
       </div>
     </li>`).join("");
 }

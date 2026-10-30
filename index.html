@@ -36,12 +36,14 @@
   .heart { background:none; border:none; color:#9a9a9a; font-size:1.4rem; cursor:pointer; float:right; line-height:1; padding:0 0 0 .4rem; }
   .heart.on { color:#e0a526; }
   .buy + .buy { margin-left:.4rem; }
-  .tag { display:inline-block; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:.15rem .5rem; border-radius:4px; margin-bottom:.35rem; color:#fff; }
-  .tag-cheap { background:#2e7d32; }
-  .tag-famous { background:#1565c0; }
-  .tag-unknown { background:#f9a825; color:#1b1b1b; }
-  .tag-must-have { background:#7b1fa2; }
-  .tag-recommended { background:#d81b60; }
+  ol.top10 li { position:relative; }
+  .tag { display:inline-block; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:.2rem .6rem; border-radius:12px; border:2px solid; background:#fff; }
+  .tag-badge { position:absolute; top:.6rem; right:.7rem; transform:rotate(9deg); transform-origin:top right; z-index:2; }
+  .tag-cheap { color:#2e7d32; border-color:#2e7d32; }
+  .tag-famous { color:#1565c0; border-color:#1565c0; }
+  .tag-unknown { color:#e0a000; border-color:#e0a000; }
+  .tag-must-have { color:#7b1fa2; border-color:#7b1fa2; }
+  .tag-recommended { color:#d81b60; border-color:#d81b60; }
   .tag-soldout { background:#555; }
   /* Helles Design, angelehnt an vinylpladen.de */
   :root { --bg:#f6f5f1; --card:#ffffff; --text:#1b1b1b; --muted:#707070; --accent:#d9480f; }
@@ -288,10 +290,11 @@ function card(r, k) {
     : `<a class="buy" href="${b ? b.url : VP_HOME}" target="_blank" rel="noopener">Zum günstigsten Shop</a>`;
   return `
     <li>
+      ${r.tag ? `<span class="tag tag-badge tag-${r.tag}">${r.tag}</span>` : ""}
       <div class="rank">${k + 1}</div>
       <div class="info">
         <button class="heart ${isFav(r) ? "on" : ""}" data-fav="${key}" title="Favorit">${isFav(r) ? "♥" : "♡"}</button>
-        ${r.tag ? `<span class="tag tag-${r.tag}">${r.tag}</span>` : ""}${r.soldOut ? `<span class="tag tag-soldout">ausverkauft</span>` : ""}
+        ${r.soldOut ? `<span class="tag tag-soldout">ausverkauft</span>` : ""}
         <div class="artist">${r.artist}${r.year ? " · " + r.year : ""} · ${r.sub}</div>
         <div class="title">${r.title}</div>
         ${r.remark ? `<div class="meta"><em>${r.remark}</em></div>` : ""}

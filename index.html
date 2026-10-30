@@ -294,7 +294,7 @@ function card(r, k) {
         ${r.tag ? `<span class="tag tag-${r.tag}">${r.tag}</span>` : ""}${r.soldOut ? `<span class="tag tag-soldout">ausverkauft</span>` : ""}
         <div class="artist">${r.artist}${r.year ? " · " + r.year : ""} · ${r.sub}</div>
         <div class="title">${r.title}</div>
-        <div class="meta">${r.reason}${r.remark ? ` <em>(${r.remark})</em>` : ""}</div>
+        ${r.remark ? `<div class="meta"><em>${r.remark}</em></div>` : ""}
         ${priceHtml(r)}
         ${buttons}
       </div>

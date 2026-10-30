@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Virtueller Plattenstore</title>
+<title>digital vinylstore</title>
 <style>
   :root { --bg:#111; --card:#1c1c1c; --text:#f2f2f2; --muted:#9a9a9a; --accent:#e0a526; }
   * { box-sizing: border-box; }
@@ -36,14 +36,33 @@
   .heart { background:none; border:none; color:#9a9a9a; font-size:1.4rem; cursor:pointer; float:right; line-height:1; padding:0 0 0 .4rem; }
   .heart.on { color:#e0a526; }
   .buy + .buy { margin-left:.4rem; }
+  /* Helles Design, angelehnt an vinylpladen.de */
+  :root { --bg:#f6f5f1; --card:#ffffff; --text:#1b1b1b; --muted:#707070; --accent:#d9480f; }
+  body { background:var(--bg); color:var(--text); }
+  header h1 { color:#1b1b1b; text-transform:lowercase; }
+  header p { color:var(--muted); }
+  .searchbar input { background:#fff; color:#1b1b1b; border:1px solid #d8d8d8; }
+  nav { display:grid; grid-template-columns:repeat(4, auto); justify-content:center; gap:.5rem; max-width:640px; margin:0 auto; }
+  nav button { background:#fff; color:#1b1b1b; border:1px solid #d8d8d8; min-width:9rem; }
+  nav button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .subs button { background:#fff; color:#1b1b1b; border:1px solid #d8d8d8; }
+  .subs button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  ol.top10 li { background:#fff; border:1px solid #ececec; box-shadow:0 1px 2px rgba(0,0,0,.05); }
+  .buy { background:var(--accent); color:#fff; }
+  .heart { color:#c4c4c4; }
+  .heart.on { color:var(--accent); }
+  .price span { color:var(--accent); }
+  .genre-link { color:var(--accent); }
+  footer { color:#888; }
+  @media (max-width:600px) { nav { grid-template-columns:repeat(2, auto); } }
 </style>
 </head>
 <body>
 <header>
-  <h1>Virtueller Plattenstore</h1>
-  <p>Top 10 pro Genre · Preise aus dem Shop-Vergleich · Kauf erfolgt beim Anbieter</p>
+  <h1>digital vinylstore</h1>
+  <p>everything you could dream of</p>
 </header>
-<div class="searchbar"><input id="search" type="search" placeholder="Suche nach Künstler oder Titel (alle Genres)"></div>
+<div class="searchbar"><input id="search" type="search" placeholder="Suche nach Künstler oder Titel"></div>
 <nav id="nav"></nav>
 <main>
   <h2 id="genre-title"></h2>
@@ -355,7 +374,8 @@ GENRES.forEach((g, i) => {
   nav.appendChild(b);
 });
 const favBtn = document.createElement("button");
-favBtn.textContent = "♥ Favoriten";
+favBtn.textContent = "♥";
+favBtn.title = "Favoriten";
 favBtn.dataset.fav = "1";
 favBtn.onclick = () => showFavs();
 nav.appendChild(favBtn);

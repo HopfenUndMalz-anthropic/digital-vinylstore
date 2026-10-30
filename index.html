@@ -11,11 +11,15 @@
   header { padding:2rem 1rem 1rem; text-align:center; }
   header h1 { margin:0; font-size:2rem; letter-spacing:.04em; }
   header p { margin:.4rem 0 0; color:var(--muted); font-size:.9rem; }
+  .searchbar { text-align:center; padding:0 1rem; }
+  .searchbar input { width:100%; max-width:480px; padding:.6rem .9rem; border-radius:8px; border:1px solid #333; background:var(--card); color:var(--text); font-size:1rem; }
   nav { display:flex; flex-wrap:wrap; gap:.5rem; justify-content:center; padding:1rem; }
-  nav button { background:var(--card); color:var(--text); border:1px solid #333; padding:.5rem 1rem; border-radius:999px; cursor:pointer; font-size:.9rem; }
-  nav button.active { background:var(--accent); color:#111; border-color:var(--accent); font-weight:600; }
+  nav button, .subs button { background:var(--card); color:var(--text); border:1px solid #333; padding:.45rem .9rem; border-radius:999px; cursor:pointer; font-size:.85rem; }
+  nav button.active, .subs button.active { background:var(--accent); color:#111; border-color:var(--accent); font-weight:600; }
+  .subs { display:flex; flex-wrap:wrap; gap:.4rem; justify-content:center; margin:0 0 1rem; }
+  .subs button { font-size:.78rem; padding:.3rem .7rem; }
   main { max-width:1000px; margin:0 auto; padding:1rem; }
-  h2 { font-size:1.4rem; margin:.5rem 0 1rem; }
+  h2 { font-size:1.4rem; margin:.5rem 0 .3rem; }
   .note { color:var(--muted); font-size:.8rem; margin-bottom:1rem; }
   ol.top10 { list-style:none; padding:0; margin:0; display:grid; gap:.75rem; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
   ol.top10 li { background:var(--card); border-radius:10px; padding:1rem; display:flex; gap:1rem; }
@@ -24,8 +28,8 @@
   .artist { color:var(--muted); font-size:.85rem; }
   .title { font-weight:600; margin:.1rem 0 .3rem; }
   .meta { font-size:.8rem; color:var(--muted); margin-bottom:.5rem; }
-  .price { font-size:.85rem; margin-bottom:.5rem; }
-  .price span { color:var(--accent); }
+  .price { font-size:.85rem; margin-bottom:.5rem; line-height:1.5; }
+  .price span { color:var(--accent); font-weight:600; }
   .buy { display:inline-block; padding:.4rem .8rem; background:var(--accent); color:#111; border-radius:6px; text-decoration:none; font-weight:600; font-size:.85rem; }
   .genre-link { display:inline-block; margin-top:1.2rem; color:var(--accent); font-size:.9rem; }
   footer { text-align:center; color:var(--muted); font-size:.75rem; padding:2rem 1rem; }
@@ -34,118 +38,163 @@
 <body>
 <header>
   <h1>Virtueller Plattenstore</h1>
-  <p>Top 10 pro Genre · Preise sind Schätzungen · Kauf erfolgt beim Anbieter</p>
+  <p>Top 10 pro Genre · Preise aus dem Shop-Vergleich · Kauf erfolgt beim Anbieter</p>
 </header>
-<div style="text-align:center;padding:0 1rem"><input id="search" type="search" placeholder="Suche nach Künstler oder Titel (alle Genres)" style="width:100%;max-width:480px;padding:.6rem .9rem;border-radius:8px;border:1px solid #333;background:#1c1c1c;color:#f2f2f2;font-size:1rem"></div>
+<div class="searchbar"><input id="search" type="search" placeholder="Suche nach Künstler oder Titel (alle Genres)"></div>
 <nav id="nav"></nav>
 <main>
   <h2 id="genre-title"></h2>
   <p class="note" id="genre-note"></p>
+  <div class="subs" id="subs"></div>
   <ol class="top10" id="list"></ol>
-  <a class="genre-link" id="genre-link" target="_blank" rel="noopener">Alle Titel dieses Genres im Shop ansehen →</a>
+  <a class="genre-link" id="genre-link" target="_blank" rel="noopener">Alle Titel dieses Genres ansehen →</a>
 </main>
-<footer>Preisangaben sind ungefähre Spannen und keine Live-Preise. Maßgeblich ist der Preis beim Anbieter vinylpladen.de.</footer>
+<footer>Preise: Stand 30.10.2026, Standard-LP bzw. genannte Ausgabe. Maßgeblich ist der Preis beim Anbieter.</footer>
 
 <script>
-const SHOP = "https://vinylpladen.de";
+const HHV_SEARCH = "https://www.hhv.de/records/katalog/filter/suche-D2N2S11?term=";
+const VP_HOME = "https://vinylpladen.de";
 
-// Jede Platte: artist, title, year, source ("Klassiker" | "Aktuell"), reason, price (Spanne, Schätzung)
+// Helfer: R(artist, title, year, untergenre, begründung, hhvPreis, vinylpladenPreis, optionen)
+// optionen: { note, vpUrl, hhvTerm }
+function R(artist, title, year, sub, reason, hhv, vp, o = {}) {
+  return { artist, title, year, sub, reason, hhv, vp,
+    note: o.note || "", vpUrl: o.vpUrl || null,
+    hhvUrl: HHV_SEARCH + encodeURIComponent(o.hhvTerm || (artist + " " + title)) };
+}
+
 const GENRES = [
-  { name: "Rock", slug: "rock-vinyl-LP", records: [
-    { artist:"Pink Floyd", title:"The Dark Side of the Moon", year:1973, source:"Klassiker", reason:"Zeitloses Konzeptalbum, sehr gute Pressungen verfügbar.", price:"31 €", shops:{ cheapest:"vinylpladen", vinylpladen:{ price:"31 €", url:"https://vinylpladen.de/vinyl/pink-floyd/the-dark-side-of-the-moon-LP", edition:"Jubiläumsausgabe 180g" }, hhv:{ price:"32,99 €", url:"https://www.hhv.de/records/katalog/filter/suche-D2N2S11?term=pink+floyd+dark+side+of+the+moon" } } },
-    { artist:"Led Zeppelin", title:"IV", year:1971, source:"Klassiker", reason:"Der Kern des Hardrock-Kanons.", price:"23 €", shops:{ cheapest:"vinylpladen", vinylpladen:{ price:"23 €", url:"https://vinylpladen.de/vinyl/led-zeppelin/led-zeppelin-lv-LP", edition:"Standard Gatefold" }, hhv:{ price:"26,99 €", url:"https://www.hhv.de/records/katalog/filter/suche-D2N2S11?term=led+zeppelin+iv" } } },
-    { artist:"The Beatles", title:"Abbey Road", year:1969, source:"Klassiker", reason:"Abschluss-Album mit starkem Seitenwechsel.", price:"28 €", shops:{ cheapest:"vinylpladen", vinylpladen:{ price:"28 €", url:"https://vinylpladen.de/vinyl/the-beatles/abbey-road-LP", edition:"Jubiläumsausgabe 180g" }, hhv:{ price:"32,99 €", url:"https://www.hhv.de/records/katalog/filter/suche-D2N2S11?term=the+beatles+abbey+road" } } },
-    { artist:"Queen", title:"A Night at the Opera", year:1975, source:"Klassiker", reason:"Vielseitig, von Oper bis Hardrock.", price:"25–30 €" },
-    { artist:"Fleetwood Mac", title:"Rumours", year:1977, source:"Klassiker", reason:"Produktion und Songwriting auf höchstem Niveau.", price:"22 €" },
-    { artist:"The Rolling Stones", title:"Exile on Main St.", year:1972, source:"Klassiker", reason:"Rauer, organischer Rock-Klassiker.", price:"25–35 €" },
-    { artist:"Radiohead", title:"OK Computer", year:1997, source:"Klassiker", reason:"Wegweisend für moderne Rockmusik.", price:"31 €" },
-    { artist:"The Who", title:"Who's Next", year:1971, source:"Klassiker", reason:"Starke Songs, kraftvolle Band.", price:"25–35 €" },
-    { artist:"Neil Young", title:"After the Gold Rush", year:1970, source:"Klassiker", reason:"Folk- und Rockmischung, ruhiger Einstieg.", price:"25–30 €" },
-    { artist:"Jimi Hendrix", title:"Are You Experienced", year:1967, source:"Klassiker", reason:"Pflichtstück für Gitarrenfans.", price:"25–35 €" }
+  { name: "Rock", records: [
+    R("Pink Floyd","The Dark Side of the Moon",1973,"Progressive","Zeitloses Konzeptalbum.",32.99,31,{note:"vinylpladen: Jubiläumsausgabe 180g",vpUrl:"https://vinylpladen.de/vinyl/pink-floyd/the-dark-side-of-the-moon-LP"}),
+    R("Led Zeppelin","IV",1971,"Hardrock","Der Kern des Hardrock-Kanons.",26.99,23,{note:"vinylpladen: Standard Gatefold",vpUrl:"https://vinylpladen.de/vinyl/led-zeppelin/led-zeppelin-lv-LP",hhvTerm:"led zeppelin iv"}),
+    R("The Beatles","Abbey Road",1969,"Pop-Rock","Abschluss-Album mit starkem Seitenwechsel.",32.99,28,{note:"vinylpladen: Jubiläumsausgabe 180g",vpUrl:"https://vinylpladen.de/vinyl/the-beatles/abbey-road-LP",hhvTerm:"the beatles abbey road"}),
+    R("Queen","A Night at the Opera",1975,"Glam & Prog","Vielseitig, von Oper bis Hardrock.",37.99,null,{note:"HHV: Clear Vinyl Edition"}),
+    R("Fleetwood Mac","Rumours",1977,"Soft Rock","Produktion und Songwriting auf höchstem Niveau.",24.99,22,{note:"HHV: Standard-LP (Rhino)"}),
+    R("The Rolling Stones","Exile on Main St.",1972,"Classic Rock","Rauer, organischer Rock-Klassiker.",39.99,null,{note:"HHV: 2LP Half-Speed"}),
+    R("Radiohead","OK Computer",1997,"Alternative","Wegweisend für moderne Rockmusik.",33.99,31,{note:"HHV: 3LP OKNOTOK-Edition"}),
+    R("The Who","Who's Next",1971,"Classic Rock","Starke Songs, kraftvolle Band.",30.99,null,{note:"HHV: Remastered 2022"}),
+    R("Pink Floyd","Wish You Were Here",1975,"Progressive","Melancholisches Meisterwerk.",58.99,28,{note:"HHV: 50th Anniversary 3LP",hhvTerm:"pink floyd wish you were here"}),
+    R("Jimi Hendrix","Are You Experienced",1967,"Psychedelic Rock","Pflichtstück für Gitarrenfans.",29.99,null,{note:"HHV: Music On Vinyl"})
   ]},
-  { name: "Pop", slug: "pop-vinyl-LP", records: [
-    { artist:"Michael Jackson", title:"Thriller", year:1982, source:"Klassiker", reason:"Meistverkauftes Album der Geschichte, zeitlos.", price:"28 €" },
-    { artist:"Prince", title:"Purple Rain", year:1984, source:"Klassiker", reason:"Pop, Rock und Soul in einem Album.", price:"28 €" },
-    { artist:"Madonna", title:"Like a Virgin", year:1984, source:"Klassiker", reason:"Prägende Pop-Platte der 80er.", price:"25–30 €" },
-    { artist:"ABBA", title:"Arrival", year:1976, source:"Klassiker", reason:"Perfekt produzierter Popsound.", price:"25–30 €" },
-    { artist:"Whitney Houston", title:"Whitney Houston", year:1985, source:"Klassiker", reason:"Starke Stimme, große Hits.", price:"25–30 €" },
-    { artist:"Adele", title:"21", year:2011, source:"Klassiker", reason:"Eines der erfolgreichsten Pop-Alben der 2010er.", price:"25–30 €" },
-    { artist:"Lady Gaga", title:"The Fame", year:2008, source:"Klassiker", reason:"Moderner Pop mit starken Hooks.", price:"25–35 €" },
-    { artist:"Amy Winehouse", title:"Back to Black", year:2006, source:"Klassiker", reason:"Retro-Soul mit modernem Pop-Einschlag.", price:"28 €" },
-    { artist:"Dua Lipa", title:"Future Nostalgia", year:2020, source:"Aktuell", reason:"Disco-inspirierter Pop, live stark.", price:"25–35 €" },
-    { artist:"Harry Styles", title:"Harry's House", year:2022, source:"Aktuell", reason:"Verspielter, warmer Pop.", price:"25–35 €" }
+  { name: "Pop", records: [
+    R("Michael Jackson","Thriller",1982,"Pop/Soul","Meistverkauftes Album der Geschichte.",28.99,28,{note:"HHV: Limited Marble; vinylpladen: Standard"}),
+    R("Prince","Purple Rain",1984,"Pop/Rock","Pop, Rock und Soul in einem Album.",29.99,28,{note:"HHV: Remastered 180g mit Poster"}),
+    R("Amy Winehouse","Back to Black",2006,"Soul-Pop","Retro-Soul mit modernem Pop-Einschlag.",38.99,28,{note:"HHV: Zoetrope Anniversary (Vorbestellung)"}),
+    R("Adele","21",2011,"Soul-Pop","Eines der erfolgreichsten Pop-Alben der 2010er.",27.99,null,{note:"HHV: Reissue"}),
+    R("Dua Lipa","Future Nostalgia",2020,"Disco-Pop","Disco-inspirierter Pop, live stark.",54.99,null,{note:"HHV: 5th Anniversary 3LP"}),
+    R("Harry Styles","Harry's House",2022,"Pop","Verspielter, warmer Pop.",38.99,null,{note:"HHV: Transparent Yellow Edition"}),
+    R("Michael Jackson","Off the Wall",1979,"Disco/Pop","Der Vorläufer von Thriller.",31.99,null,{note:"HHV: Picture Disc"}),
+    R("Whitney Houston","Whitney Houston",1985,"Soul-Pop","Starke Stimme, große Hits.",69.99,null,{note:"HHV: MoFi SuperVinyl, derzeit nicht lieferbar"}),
+    R("Billie Eilish","Hit Me Hard And Soft",2024,"Alternative Pop","Gewagtes Pop-Album.",47.99,null,{note:"HHV: Blue/Orange Splatter"}),
+    R("Bruno Mars","Doo-Wops & Hooligans",2010,"Pop-Soul","Eingängiger Pop-Soul.",20.99,null,{note:"HHV: derzeit nicht lieferbar"})
   ]},
-  { name: "Elektronisch", slug: "elektronisch-vinyl-LP", records: [
-    { artist:"Kraftwerk", title:"Die Mensch-Maschine", year:1978, source:"Klassiker", reason:"Grundlage des elektronischen Pop.", price:"25–35 €" },
-    { artist:"Daft Punk", title:"Random Access Memories", year:2013, source:"Klassiker", reason:"Disco-House mit Live-Instrumenten.", price:"30–40 €" },
-    { artist:"Aphex Twin", title:"Selected Ambient Works 85–92", year:1992, source:"Klassiker", reason:"Einflussreiches Ambient-Werk.", price:"30–40 €" },
-    { artist:"Massive Attack", title:"Mezzanine", year:1998, source:"Klassiker", reason:"Trip-Hop mit dunkler Atmosphäre.", price:"25–35 €" },
-    { artist:"Boards of Canada", title:"Music Has the Right to Children", year:1998, source:"Klassiker", reason:"Warme, nostalgische Elektronik.", price:"25–35 €" },
-    { artist:"Jean-Michel Jarre", title:"Oxygène", year:1976, source:"Klassiker", reason:"Frühes Synthesizer-Meisterwerk.", price:"25–35 €" },
-    { artist:"The Chemical Brothers", title:"Dig Your Own Hole", year:1997, source:"Klassiker", reason:"Big-Beat-Klassiker.", price:"25–35 €" },
-    { artist:"Burial", title:"Untrue", year:2007, source:"Klassiker", reason:"Dunkler UK-Garage, sehr eigenständig.", price:"25–35 €" },
-    { artist:"Moderat", title:"II", year:2013, source:"Klassiker", reason:"Melancholische Electronica.", price:"25–35 €" },
-    { artist:"Orbital", title:"In Sides", year:1996, source:"Klassiker", reason:"Hypnotische Techno-Landschaften.", price:"25–35 €" }
+  { name: "Elektronisch", records: [
+    R("Kraftwerk","Die Mensch-Maschine",1978,"Elektropop","Grundlage des elektronischen Pop.",38.99,null,{note:"HHV: Translucent Red Edition"}),
+    R("Daft Punk","Random Access Memories",2013,"Disco-House","Disco-House mit Live-Instrumenten.",38.99,35,{note:"HHV derzeit nicht lieferbar"}),
+    R("Aphex Twin","Selected Ambient Works 85–92",1992,"Ambient","Einflussreiches Ambient-Werk.",null,31,{note:"nur vinylpladen.de geprüft"}),
+    R("Massive Attack","Mezzanine",1998,"Trip-Hop","Trip-Hop mit dunkler Atmosphäre.",36.99,null,{note:"HHV: 2LP"}),
+    R("Boards of Canada","Music Has the Right to Children",1998,"IDM / Ambient","Warme, nostalgische Elektronik.",37.99,null,{note:"HHV derzeit nicht lieferbar, 2LP"}),
+    R("Jean-Michel Jarre","Oxygène",1976,"Synth-Ambient","Frühes Synthesizer-Meisterwerk.",33.99,null,{note:"HHV: Vorbestellung ab 20.11.2026"}),
+    R("Burial","Untrue",2007,"Dubstep","Dunkler UK-Garage, sehr eigenständig.",34.99,null,{note:"HHV: 2LP"}),
+    R("Moderat","III",2016,"Electronica","Melancholische Electronica.",24.99,null,{note:"Das dritte Album der Band"}),
+    R("Underworld","Strawberry Hotel",2024,"Techno","Glänzender, zupackender Techno.",33.99,null,{note:"HHV: 2LP"}),
+    R("Bonobo","Black Sands",2010,"Downtempo","Warmer, organischer Downtempo.",32.99,null,{note:"HHV: 2LP"})
   ]},
-  { name: "Jazz", slug: "jazz-vinyl-LP", records: [
-    { artist:"Miles Davis", title:"Kind of Blue", year:1959, source:"Klassiker", reason:"Das meistverkaufte Jazzalbum, Einstieg schlechthin.", price:"25–35 €" },
-    { artist:"John Coltrane", title:"A Love Supreme", year:1965, source:"Klassiker", reason:"Spirituelles Hauptwerk.", price:"25–35 €" },
-    { artist:"Herbie Hancock", title:"Maiden Voyage", year:1965, source:"Klassiker", reason:"Eleganter Hardbop.", price:"25–35 €" },
-    { artist:"Thelonious Monk", title:"Brilliant Corners", year:1957, source:"Klassiker", reason:"Eigenwillige Kompositionen.", price:"25–35 €" },
-    { artist:"Bill Evans", title:"Sunday at the Village Vanguard", year:1961, source:"Klassiker", reason:"Intimes Trio-Live-Album.", price:"25–35 €" },
-    { artist:"Chet Baker", title:"Chet Baker Sings", year:1956, source:"Klassiker", reason:"Zarter Cool-Jazz-Gesang.", price:"25–30 €" },
-    { artist:"Art Blakey & The Jazz Messengers", title:"Moanin'", year:1958, source:"Klassiker", reason:"Energiegeladener Hardbop.", price:"25–35 €" },
-    { artist:"Charles Mingus", title:"Mingus Ah Um", year:1959, source:"Klassiker", reason:"Vielseitiges Bandwerk.", price:"25–35 €" },
-    { artist:"Makaya McCraven", title:"In the Moment", year:2018, source:"Aktuell", reason:"Moderne Live-Jazz-Produktion.", price:"25–35 €" },
-    { artist:"Kamasi Washington", title:"The Epic", year:2015, source:"Aktuell", reason:"Groß angelegter Spiritual-Jazz.", price:"30–40 €" }
+  { name: "Jazz", records: [
+    R("Miles Davis","Kind of Blue",1959,"Modal Jazz","Das meistverkaufte Jazzalbum, Einstieg schlechthin.",16.99,null,{note:"HHV: Gatefold Edition 2017"}),
+    R("John Coltrane","A Love Supreme",1965,"Spiritual Jazz","Spirituelles Hauptwerk.",21.99,null,{note:"HHV: Reissue 2022, Sale"}),
+    R("Herbie Hancock","Maiden Voyage",1965,"Hardbop","Eleganter Hardbop.",23.99,null,{note:"HHV: Reissue"}),
+    R("Thelonious Monk","Monk's Music",1957,"Hardbop","Eigenwillige Kompositionen mit Coltrane.",20.99,null,{note:"HHV: Reissue 2024"}),
+    R("Cannonball Adderley","Somethin' Else",1958,"Hardbop","Kleine Besetzung, große Musik.",21.99,null,{note:"HHV: Clear Vinyl Edition"}),
+    R("Art Blakey & The Jazz Messengers","Moanin'",1958,"Hardbop","Energiegeladener Hardbop.",30.99,null,{note:"HHV: EU-Reissue"}),
+    R("Charles Mingus","Mingus Ah Um",1959,"Hardbop","Vielseitiges Bandwerk.",27.99,null,{note:"HHV: Music On Vinyl"}),
+    R("Bill Evans","The Village Vanguard Sessions",1961,"Cool / Trio","Intimes Trio-Live-Album.",29.99,null,{note:"HHV: limitierte 2LP"}),
+    R("Chet Baker","Chet Baker Sings",1956,"Cool Jazz","Zarter Cool-Jazz-Gesang.",23.99,null,{note:"HHV: Blue Note Essentials"}),
+    R("Kamasi Washington","The Epic",2015,"Spiritual Jazz","Groß angelegter Spiritual-Jazz.",43.99,null,{note:"HHV: 3LP"})
   ]},
-  { name: "Heavy Metal", slug: "heavy-metal-vinyl-LP", records: [
-    { artist:"Black Sabbath", title:"Paranoid", year:1970, source:"Klassiker", reason:"Grundstein des Metal.", price:"25–35 €" },
-    { artist:"Iron Maiden", title:"The Number of the Beast", year:1982, source:"Klassiker", reason:"NWOBHM-Standard.", price:"25–35 €" },
-    { artist:"Judas Priest", title:"British Steel", year:1980, source:"Klassiker", reason:"Eingängige, harte Hits.", price:"25–35 €" },
-    { artist:"Metallica", title:"Master of Puppets", year:1986, source:"Klassiker", reason:"Thrash-Meilenstein.", price:"25–35 €" },
-    { artist:"Slayer", title:"Reign in Blood", year:1986, source:"Klassiker", reason:"Kompromisloser Thrash.", price:"25–35 €" },
-    { artist:"Megadeth", title:"Rust in Peace", year:1990, source:"Klassiker", reason:"Technisch starker Thrash.", price:"25–35 €" },
-    { artist:"Pantera", title:"Vulgar Display of Power", year:1992, source:"Klassiker", reason:"Groove-Metal mit Wucht.", price:"25–35 €" },
-    { artist:"Mercyful Fate", title:"Melissa", year:1983, source:"Klassiker", reason:"Einfluss auf den Black Metal.", price:"25–35 €" },
-    { artist:"Opeth", title:"Blackwater Park", year:2001, source:"Klassiker", reason:"Progressiver Death Metal.", price:"25–35 €" },
-    { artist:"Ghost", title:"Impera", year:2022, source:"Aktuell", reason:"Melodischer, eingängiger Metal.", price:"25–35 €" }
+  { name: "Heavy Metal", records: [
+    R("Black Sabbath","Paranoid",1970,"Proto-Metal","Grundstein des Metal.",28.99,null,{note:"HHV: EU-Reissue"}),
+    R("Iron Maiden","The Number of the Beast",1982,"NWOBHM","NWOBHM-Standard.",31.99,null,{note:"HHV: 2015 Remaster"}),
+    R("Judas Priest","British Steel",1980,"NWOBHM","Eingängige, harte Hits.",28.99,null,{note:"HHV: EU-Reissue"}),
+    R("Judas Priest","Painkiller",1990,"Speed Metal","Hochgeschwindigkeits-Metal.",28.99,null,{note:"HHV: 35th Anniversary"}),
+    R("Metallica","Master of Puppets",1986,"Thrash","Thrash-Meilenstein.",34.99,null,{note:"HHV: DE-Reissue"}),
+    R("Slayer","South of Heaven",1988,"Thrash","Schwerer, düsterer Thrash.",28.99,null,{note:"HHV: CZ-Reissue"}),
+    R("Megadeth","Rust in Peace",1990,"Thrash","Technisch starker Thrash.",37.99,null,{note:"HHV: 180g, derzeit nicht lieferbar"}),
+    R("Pantera","Vulgar Display of Power",1992,"Groove Metal","Groove-Metal mit Wucht.",50.99,null,{note:"HHV: 2LP Rhino"}),
+    R("Opeth","Blackwater Park",2001,"Progressive Death Metal","Progressiver Death Metal.",32.99,null,{note:"HHV: 2LP Colored, derzeit nicht lieferbar"}),
+    R("Ghost","Impera",2022,"Melodic Metal","Melodischer, eingängiger Metal.",29.99,null,{note:"HHV: Black Vinyl"})
   ]},
-  { name: "Hip Hop", slug: "hip-hop-vinyl-LP", records: [
-    { artist:"Nas", title:"Illmatic", year:1994, source:"Klassiker", reason:"Eines der bedeutendsten Rap-Alben.", price:"25–35 €" },
-    { artist:"A Tribe Called Quest", title:"The Low End Theory", year:1991, source:"Klassiker", reason:"Jazzig geprägter Golden-Age-Rap.", price:"25–35 €" },
-    { artist:"Wu-Tang Clan", title:"Enter the Wu-Tang (36 Chambers)", year:1993, source:"Klassiker", reason:"Roher New-York-Sound.", price:"25–35 €" },
-    { artist:"The Notorious B.I.G.", title:"Ready to Die", year:1994, source:"Klassiker", reason:"Storytelling auf höchstem Niveau.", price:"25–35 €" },
-    { artist:"Dr. Dre", title:"The Chronic", year:1992, source:"Klassiker", reason:"Prägender G-Funk.", price:"25–35 €" },
-    { artist:"OutKast", title:"Aquemini", year:1998, source:"Klassiker", reason:"Experimenteller Südstaaten-Rap.", price:"25–35 €" },
-    { artist:"Public Enemy", title:"It Takes a Nation of Millions to Hold Us Back", year:1988, source:"Klassiker", reason:"Politisch und klanglich radikal.", price:"25–35 €" },
-    { artist:"Madvillain (MF Doom & Madlib)", title:"Madvillainy", year:2004, source:"Klassiker", reason:"Kultalbum des Underground-Hip-Hop.", price:"25–35 €" },
-    { artist:"Kendrick Lamar", title:"good kid, m.A.A.d city", year:2012, source:"Aktuell", reason:"Narratives Konzeptalbum.", price:"25–35 €" },
-    { artist:"Kendrick Lamar", title:"To Pimp a Butterfly", year:2015, source:"Aktuell", reason:"Vielschichtig, jazzig, politisch.", price:"25–35 €" }
+  { name: "Hip Hop", records: [
+    R("Nas","Illmatic",1994,"East Coast","Eines der bedeutendsten Rap-Alben.",21.99,null,{note:"HHV: EU-Reissue"}),
+    R("A Tribe Called Quest","The Low End Theory",1991,"Jazz-Rap","Jazzig geprägter Golden-Age-Rap.",31.99,null,{note:"HHV: 2LP"}),
+    R("Wu-Tang Clan","Enter the Wu-Tang (Live)",2025,"East Coast","Live-Mitschnitt auf Colored Vinyl.",30.99,null,{note:"HHV: Live-Colored-Edition"}),
+    R("Dr. Dre","The Chronic",1992,"West Coast / G-Funk","Prägender G-Funk.",39.99,null,{note:"HHV: 2LP"}),
+    R("OutKast","Aquemini",1998,"Southern Hip-Hop","Experimenteller Südstaaten-Rap.",34.99,null,{note:"HHV: 2LP Special Effect"}),
+    R("Public Enemy","It Takes a Nation of Millions...",1988,"Political Hip-Hop","Politisch und klanglich radikal.",29.99,null,{note:"HHV: Exclusive Colored"}),
+    R("Kendrick Lamar","To Pimp a Butterfly",2015,"Conscious Rap","Vielschichtig, jazzig, politisch.",39.99,null,{note:"HHV: 10th Anniversary 2LP"}),
+    R("Kendrick Lamar","good kid, m.A.A.d city",2012,"Conscious Rap","Narratives Konzeptalbum.",34.99,null,{note:"HHV: 10th Anniversary 2LP"}),
+    R("Mobb Deep","The Infamous",1995,"East Coast","Düsterer New-York-Rap.",34.99,null,{note:"HHV: 2LP, 180g"}),
+    R("Nas","It Was Written",1996,"East Coast","Zweites Nas-Album.",32.99,null,{note:"HHV: 2LP"})
   ]},
-  { name: "Indie-Rock", slug: "indie-rock-vinyl-LP", records: [
-    { artist:"The Strokes", title:"Is This It", year:2001, source:"Klassiker", reason:"Prägend für die Garage-Rock-Welle.", price:"25–35 €" },
-    { artist:"Pavement", title:"Slanted and Enchanted", year:1992, source:"Klassiker", reason:"Einflussreicher Lo-Fi-Indie.", price:"25–30 €" },
-    { artist:"Pixies", title:"Doolittle", year:1989, source:"Klassiker", reason:"Laut-leise-Dynamik, Vorbild vieler Bands.", price:"25–35 €" },
-    { artist:"Arcade Fire", title:"Funeral", year:2004, source:"Klassiker", reason:"Große Indie-Hymnen.", price:"25–35 €" },
-    { artist:"The National", title:"Boxer", year:2007, source:"Klassiker", reason:"Melancholischer Indie-Rock.", price:"25–35 €" },
-    { artist:"Interpol", title:"Turn On the Bright Lights", year:2002, source:"Klassiker", reason:"Post-Punk-Revival.", price:"25–35 €" },
-    { artist:"Yo La Tengo", title:"I Can Hear the Heart Beating as One", year:1997, source:"Klassiker", reason:"Vielseitig, Indie-Kanon.", price:"25–35 €" },
-    { artist:"Arctic Monkeys", title:"AM", year:2013, source:"Aktuell", reason:"Moderner Indie-Rock mit Groove.", price:"25–35 €" },
-    { artist:"Vampire Weekend", title:"Modern Vampires of the City", year:2013, source:"Aktuell", reason:"Eingängig, mit Vielfalt.", price:"25–35 €" },
-    { artist:"Phoebe Bridgers", title:"Punisher", year:2020, source:"Aktuell", reason:"Introspektiver Indie-Folk-Rock.", price:"25–35 €" }
+  { name: "Indie-Rock", records: [
+    R("The Strokes","Is This It",2001,"Garage Rock","Prägend für die Garage-Rock-Welle.",28.99,null,{note:"HHV derzeit nicht lieferbar"}),
+    R("Pixies","Doolittle",1989,"Alternative","Laut-leise-Dynamik.",27.99,null,{note:"HHV: 4AD Reissue"}),
+    R("Arcade Fire","Funeral",2004,"Indie Rock","Große Indie-Hymnen.",28.99,null,{note:"HHV: Limited Gatefold"}),
+    R("Interpol","Marauder",2018,"Post-Punk","Dunkler Post-Punk-Sound.",27.99,null,{note:"HHV: Black Vinyl"}),
+    R("Arctic Monkeys","AM",2013,"Indie Rock","Moderner Indie-Rock mit Groove.",25.99,null,{note:"HHV: UK-Original"}),
+    R("Vampire Weekend","Modern Vampires of the City",2013,"Indie Pop","Eingängig, mit Vielfalt.",23.99,null,{note:"HHV: XL-Reissue"}),
+    R("Phoebe Bridgers","Punisher",2020,"Singer-Songwriter","Introspektiver Indie-Folk-Rock.",29.99,null,{note:"HHV: Black Vinyl"}),
+    R("Pavement","Slanted & Enchanted",1992,"Lo-Fi","Einflussreicher Lo-Fi-Indie.",25.99,null,{note:"HHV: Matador-Reissue"}),
+    R("The Libertines","Up the Bracket",2002,"Garage Rock","Britischer Garage-Rock.",37.99,null,{note:"HHV: 20th Anniversary 2LP Red"}),
+    R("Oasis","Definitely Maybe",1994,"Britpop","Britpop-Klassiker.",32.99,null,{note:"HHV: 2LP Remastered"})
   ]},
-  { name: "Blues", slug: "blues-vinyl-LP", records: [
-    { artist:"Robert Johnson", title:"King of the Delta Blues Singers", year:1961, source:"Klassiker", reason:"Wurzeln des Delta-Blues.", price:"25–35 €" },
-    { artist:"Howlin' Wolf", title:"Howlin' Wolf", year:1962, source:"Klassiker", reason:"Rauer Chicago-Blues.", price:"25–35 €" },
-    { artist:"B.B. King", title:"Live at the Regal", year:1965, source:"Klassiker", reason:"Einer der besten Blues-Live-Mitschnitte.", price:"25–35 €" },
-    { artist:"Albert King", title:"Born Under a Bad Sign", year:1967, source:"Klassiker", reason:"Stark im Gitarrenspiel.", price:"25–35 €" },
-    { artist:"Muddy Waters", title:"Hard Again", year:1977, source:"Klassiker", reason:"Kraftvoller später Chicago-Blues.", price:"25–30 €" },
-    { artist:"Son House", title:"Father of Delta Blues", year:1965, source:"Klassiker", reason:"Authentisches Delta-Blues-Erlebnis.", price:"25–35 €" },
-    { artist:"Stevie Ray Vaughan", title:"Texas Flood", year:1983, source:"Klassiker", reason:"Moderner Blues-Rock.", price:"25–35 €" },
-    { artist:"Buddy Guy", title:"Damn Right, I've Got the Blues", year:1991, source:"Klassiker", reason:"Energie und Gefühl.", price:"25–35 €" },
-    { artist:"Gary Clark Jr.", title:"Blak and Blu", year:2012, source:"Aktuell", reason:"Moderner Blues mit Rock-Einfluss.", price:"25–35 €" },
-    { artist:"John Lee Hooker", title:"The Healer", year:1989, source:"Klassiker", reason:"Zugängliche Späten-Phase des Blues.", price:"25–35 €" }
+  { name: "Blues", records: [
+    R("Robert Johnson","King of the Delta Blues Singers",1961,"Delta Blues","Wurzeln des Delta-Blues.",17.99,null,{note:"HHV: Reissue"}),
+    R("Howlin' Wolf","Moanin' in the Moonlight",1959,"Chicago Blues","Rauer Chicago-Blues.",18.99,null,{note:"HHV: Original 2026"}),
+    R("Muddy Waters","Hard Again",1977,"Chicago Blues","Kraftvoller später Chicago-Blues.",27.99,null,{note:"HHV: Music On Vinyl"}),
+    R("Stevie Ray Vaughan","Texas Flood",1983,"Blues Rock","Moderner Blues-Rock.",28.99,null,{note:"HHV: EU-Reissue"}),
+    R("Albert King","Born Under a Bad Sign",1967,"Memphis Blues","Stark im Gitarrenspiel.",34.99,null,{note:"HHV: limitiert, derzeit nicht lieferbar"}),
+    R("Gary Clark Jr.","Story of Sonny Boy Slim",2015,"Blues Rock","Modern, mit Rock-Einfluss.",42.99,null,{note:"HHV: 2LP (anderes Album als geplant)"}),
+    R("John Lee Hooker","The Best of Friends",2024,"Blues","Zugängliche Späten-Phase des Blues.",35.99,null,{note:"HHV: 2LP-Compilation"}),
+    R("Buddy Guy","Ain't Done with the Blues",2025,"Chicago Blues","Energie und Gefühl.",31.99,null,{note:"HHV: 2LP"}),
+    R("B.B. King","Signature Collection",2015,"Blues","Zentrale Werke von B.B. King.",25.99,null,{note:"HHV: 2LP-Compilation"}),
+    R("Taj Mahal","Taj Mahal",2017,"Blues","Vielseitiger Roots-Blues.",29.99,null,{note:"HHV: Music On Vinyl"})
+  ]},
+  { name: "Soul & Funk", records: [
+    R("James Brown","Live at the Apollo",1963,"Funk / Soul","Live-Klassiker voller Energie.",20.99,null,{note:"HHV: Colored Edition"}),
+    R("Stevie Wonder","Songs in the Key of Life",1976,"Soul","Opulentes Doppelalbum.",51.99,null,{note:"HHV: 2LP+7\""}),
+    R("Stevie Wonder","Innervisions",1973,"Soul","Politischer Soul mit Synthesizern.",30.99,null,{note:"HHV: Reissue"}),
+    R("Marvin Gaye","What's Going On",1971,"Soul","Meisterwerk des politischen Soul.",26.99,null,{note:"HHV: Green Vinyl Edition"}),
+    R("Aretha Franklin","I Never Loved a Man the Way I Love You",1967,"Soul","Atlantic-Debüt der Queen of Soul.",73.99,null,{note:"HHV: 2LP Analogue Productions"}),
+    R("Al Green","Let's Stay Together",1971,"Southern Soul","Warmer Soul-Klassiker.",32.99,null,{note:"HHV: 180g Reissue"}),
+    R("Sly & The Family Stone","There's a Riot Goin' On",1971,"Funk","Düsterer, politischer Funk.",31.99,null,{note:"HHV: Red Vinyl Edition"}),
+    R("Parliament","Mothership Connection",1975,"P-Funk","Funk-Milestone in Audiophilqualität.",73.99,null,{note:"HHV: 2LP Mobile Fidelity"}),
+    R("Earth, Wind & Fire","That's the Way of the World",1975,"Funk / Soul","Übergang zu jazziger Fusion.",28.99,null,{note:"HHV: Sony Reissue"}),
+    R("Erykah Badu","Baduizm",1997,"Neo-Soul","Neo-Soul-Debüt mit Grammy.",36.99,null,{note:"HHV: 2LP"})
+  ]},
+  { name: "Reggae", records: [
+    R("Bob Marley & The Wailers","Exodus",1977,"Roots Reggae","Nachdenkliches Meisterwerk.",33.99,null,{note:"HHV: Limited 180g"}),
+    R("Bob Marley & The Wailers","Legend",1984,"Best-of","Die ideale Einführung in Marley.",43.99,null,{note:"HHV: 2LP 30th Anniversary"}),
+    R("Peter Tosh","Legalize It",1976,"Roots Reggae","Politischer Roots-Reggae.",31.99,null,{note:"HHV: Gold Vinyl Edition"}),
+    R("Toots & The Maytals","Funky Kingston",1973,"Rocksteady / Reggae","Ein Klassiker mit Soul-Einflüssen.",24.99,null,{note:"HHV: Music On Vinyl"}),
+    R("Burning Spear","Social Living",2015,"Roots Reggae","Roots-Reggae mit Dub-Version.",39.99,null,{note:"HHV: 2LP (anderes Album als geplant)"}),
+    R("Lee Scratch Perry","Super Ape Returns to Conquer",1976,"Dub","Experimenteller Dub.",32.39,null,{note:"HHV: Red Vinyl Edition"}),
+    R("Black Uhuru","Sinsemilla",1981,"Roots Reggae","Roots-Reggae mit typischem Groove.",34.99,null,{note:"HHV: Island 2026"}),
+    R("Jimmy Cliff","The Harder They Come",1972,"Soundtrack","Der Soundtrack zum Kultfilm.",22.99,null,{note:"HHV: Vorbestellung ab 06.11.2026"}),
+    R("Culture","Two Sevens Clash",1976,"Roots Reggae","Roots-Reggae-Klassiker.",17.99,null,{note:"HHV: Reissue"}),
+    R("Israel Vibration","Reggae Music Never Dies",2025,"Roots Reggae","Aktuelles Studioalbum der Roots-Legenden.",34.99,null,{note:"HHV: 2025"})
+  ]},
+  { name: "Klassik", records: [
+    R("Glenn Gould","Goldberg Variations",1955,"Klavier / Barock","Gould-Interpretation von 1955.",23.99,null,{note:"HHV: Sony 2015"}),
+    R("Max Richter / Daniel Hope","Recomposed: Vivaldi – Four Seasons",2014,"Neoklassik","Moderne Neuinterpretation von Vivaldi.",41.99,null,{note:"HHV: 2LP"}),
+    R("Simon Rattle / LSO","Holst: The Planets",2023,"Orchester","Orchesterwerk in Bestform.",24.99,null,{note:"HHV: 180g"}),
+    R("Philip Glass","Glassworks",1982,"Minimal Music","Minimalismus mit Pop-Nähe.",29.99,null,{note:"HHV: Music On Vinyl"}),
+    R("Daniel Barenboim / Vincenzo Maltempo","Chopin: Nocturnes",2024,"Klavier","Chopin-Nocturnes auf Biovinyl.",37.99,null,{note:"HHV: 2LP Biovinyl"}),
+    R("Bach","Brandenburgische Konzerte",1721,"Barock","Barocke Orchesterkonzerte.",16.99,null,{note:"HHV: Bellevue, 180g"}),
+    R("Erik Satie","Gymnopédies & Gnossiennes",1888,"Impressionismus","Ruhige Klavierstücke.",22.99,null,{note:"HHV: Warner-Reissue"}),
+    R("Mozart","Requiem",1791,"Chor / Oper","Mozarts letztes Werk.",29.99,null,{note:"HHV: 2LP Harmonia Mundi"}),
+    R("Maurice Ravel","Bolero",1928,"Orchester","Ravels Orchesterklassiker.",17.99,null,{note:"HHV: Vinyl Passion"}),
+    R("Claude Debussy","The Masterpieces",1894,"Impressionismus","Debussy-Meisterwerke auf einer LP.",15.99,null,{note:"HHV: Wagram-Compilation"})
   ]}
 ];
 
@@ -153,68 +202,91 @@ const nav = document.getElementById("nav");
 const list = document.getElementById("list");
 const title = document.getElementById("genre-title");
 const note = document.getElementById("genre-note");
+const subs = document.getElementById("subs");
 const genreLink = document.getElementById("genre-link");
+const search = document.getElementById("search");
+let activeIndex = 0;
+let activeSub = null;
 
-// Verlinkung: bei verglichenen Platten direkt zum günstigeren Shop,
-// sonst HHV-Suche (Suchpfad getestet). Produktlinks vinylpladen: /vinyl/{artist}/{title}-LP-1 (Muster getestet).
-const HHV_SEARCH = "https://www.hhv.de/records/katalog/filter/suche-D2N2S11?term=";
-function buyUrl(r) {
-  if (r.shops) {
-    return r.shops.cheapest === "vinylpladen" ? r.shops.vinylpladen.url : r.shops.hhv.url;
-  }
-  return HHV_SEARCH + encodeURIComponent(r.artist + " " + r.title);
+function fmt(p) { return p.toFixed(2).replace(".", ",") + " €"; }
+
+// Günstigster verfügbarer Shop
+function best(r) {
+  if (r.hhv == null && r.vp == null) return null;
+  if (r.vp == null) return { shop: "HHV", price: r.hhv, url: r.hhvUrl };
+  if (r.hhv == null) return { shop: "vinylpladen.de", price: r.vp, url: r.vpUrl || VP_HOME };
+  return r.vp < r.hhv
+    ? { shop: "vinylpladen.de", price: r.vp, url: r.vpUrl || VP_HOME }
+    : { shop: "HHV", price: r.hhv, url: r.hhvUrl };
 }
 
 function priceHtml(r) {
-  if (!r.shops) return `<div class="price">Ca. <span>${r.price}</span></div>`;
-  const v = r.shops.vinylpladen, h = r.shops.hhv;
-  const best = r.shops.cheapest === "vinylpladen" ? "vinylpladen.de" : "HHV";
-  return `<div class="price">Standard-LP: vinylpladen.de <span>${v.price}</span> · HHV <span>${h.price}</span><br>Günstigster: <span>${best}</span></div>`;
+  const b = best(r);
+  const lines = [];
+  lines.push(`HHV: <span>${r.hhv != null ? fmt(r.hhv) : "nicht verfügbar"}</span>`);
+  lines.push(`vinylpladen.de: <span>${r.vp != null ? fmt(r.vp) : "nicht verfügbar"}</span>`);
+  if (b) lines.push(`Günstigster: <span>${fmt(b.price)} bei ${b.shop}</span>`);
+  const n = r.note ? `<br><em style="color:#9a9a9a">${r.note}</em>` : "";
+  return `<div class="price">${lines.join("<br>")}${n}</div>`;
 }
 
-let activeIndex = 0;
-function show(i) {
-  activeIndex = i;
-  document.querySelectorAll("nav button").forEach((b, j) => b.classList.toggle("active", i === j));
-  const g = GENRES[i];
-  title.textContent = g.name;
-  note.textContent = "Auswahl: Klassiker und aktuelle Titel. Preisspannen sind Schätzungen.";
-  genreLink.href = SHOP + "/genre/" + g.slug;
-  list.innerHTML = g.records.map((r, k) => `
+function card(r, k) {
+  const b = best(r);
+  return `
     <li>
       <div class="rank">${k + 1}</div>
       <div class="info">
-        <div class="artist">${r.artist} · ${r.year} · ${r.source}</div>
+        <div class="artist">${r.artist} · ${r.year} · ${r.sub}</div>
         <div class="title">${r.title}</div>
         <div class="meta">${r.reason}</div>
         ${priceHtml(r)}
-        <a class="buy" href="${buyUrl(r)}" target="_blank" rel="noopener">${r.shops ? "Zum günstigeren Shop" : "Im Shop suchen"}</a>
+        <a class="buy" href="${b ? b.url : VP_HOME}" target="_blank" rel="noopener">Zum günstigsten Shop</a>
       </div>
-    </li>`).join("");
+    </li>`;
 }
 
-// Suche über alle Genres
-document.getElementById("search").addEventListener("input", (e) => {
+function show(i) {
+  activeIndex = i;
+  activeSub = null;
+  document.querySelectorAll("nav button").forEach((b, j) => b.classList.toggle("active", i === j));
+  const g = GENRES[i];
+  title.textContent = g.name;
+  note.textContent = g.records.length + " Platten · Preise aus HHV und vinylpladen.de";
+  renderSubs(g);
+  renderList(g.records);
+  genreLink.href = "https://www.hhv.de/records";
+}
+
+function renderSubs(g) {
+  const uniq = [...new Set(g.records.map(r => r.sub))];
+  subs.innerHTML = uniq.map(s => `<button data-sub="${s}">${s}</button>`).join("");
+  subs.querySelectorAll("button").forEach(btn => {
+    btn.onclick = () => {
+      activeSub = activeSub === btn.dataset.sub ? null : btn.dataset.sub;
+      subs.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.sub === activeSub));
+      renderList(activeSub ? g.records.filter(r => r.sub === activeSub) : g.records);
+    };
+  });
+}
+
+function renderList(records) {
+  list.innerHTML = records.length ? records.map((r, k) => card(r, k)).join("") : "<li>Keine Treffer.</li>";
+}
+
+search.addEventListener("input", (e) => {
   const q = e.target.value.trim().toLowerCase();
   if (!q) { show(activeIndex); return; }
   const hits = [];
   GENRES.forEach(g => g.records.forEach(r => {
-    if ((r.artist + " " + r.title).toLowerCase().includes(q)) hits.push({ ...r, genre: g.name });
+    if ((r.artist + " " + r.title).toLowerCase().includes(q)) hits.push({ ...r, genreName: g.name });
   }));
   title.textContent = "Suche: " + e.target.value.trim();
   note.textContent = hits.length + " Treffer in allen Genres.";
-  genreLink.href = SHOP;
-  list.innerHTML = hits.length ? hits.map((r, k) => `
-    <li>
-      <div class="rank">${k + 1}</div>
-      <div class="info">
-        <div class="artist">${r.artist} · ${r.year} · ${r.genre}</div>
-        <div class="title">${r.title}</div>
-        <div class="meta">${r.reason}</div>
-        ${priceHtml(r)}
-        <a class="buy" href="${buyUrl(r)}" target="_blank" rel="noopener">${r.shops ? "Zum günstigeren Shop" : "Im Shop suchen"}</a>
-      </div>
-    </li>`).join("") : "<li>Keine Treffer.</li>";
+  subs.innerHTML = "";
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  list.innerHTML = hits.length
+    ? hits.map((r, k) => card({ ...r, sub: r.sub + " · " + r.genreName }, k)).join("")
+    : "<li>Keine Treffer.</li>";
 });
 
 GENRES.forEach((g, i) => {
